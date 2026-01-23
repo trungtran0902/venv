@@ -1,17 +1,17 @@
-import time, random
-import pandas as pd
+import time
 import tkinter as tk
 from tkinter import filedialog
+import pandas as pd
 from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 
-# ===== Mở hộp thoại chọn file =====
+# ===== B1: Mở hộp thoại chọn file =====
 root = tk.Tk()
 root.withdraw()  # Ẩn cửa sổ chính của Tkinter
 file_path = filedialog.askopenfilename(title="Chọn file Excel", filetypes=[("Excel Files", "*.xlsx")])
@@ -20,12 +20,14 @@ if not file_path:
     print("Bạn chưa chọn file!")
     exit()
 
+# ===== B2: Hiển thị các cột trong file Excel =====
 df = pd.read_excel(file_path)
 
 print("DANH SÁCH CỘT:")
 for i, col in enumerate(df.columns):
     print(f"{i}: {col}")
 
+# ===== B3: Chọn số thứ tự cột làm keyword =====
 idx = int(input("Nhập số thứ tự cột làm keyword: "))
 keyword_col = df.columns[idx]
 keywords = df[keyword_col].dropna().astype(str).tolist()
@@ -35,62 +37,55 @@ print("5 keyword đầu:")
 for k in keywords[:5]:
     print("-", k)
 
-# ===== Cấu hình Chrome =====
+# ===== B4: Mở Google =====
 options = Options()
 options.add_argument("--disable-blink-features=AutomationControlled")
-options.add_argument("--start-maximized")
-options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36")
-
 driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-wait = WebDriverWait(driver, 20)
 
-results = []
+# ===== B5: Truyền keyword + legal name =====
+wait = WebDriverWait(driver, 10)
 
-# ===== Chạy từng keyword =====
 for kw in keywords:
     print(f"\nĐang tìm: {kw} legal name")
     driver.get("https://www.google.com")
-    time.sleep(random.uniform(2, 4))
+    time.sleep(2)
 
     search_box = wait.until(EC.presence_of_element_located((By.NAME, "q")))
 
-    # Tạo từ khóa dạng: "MM Mega Market An Phú legal name"
     search_term = f"{kw} legal name"
-
-    # Truyền từ khóa vào ô tìm kiếm
     search_box.clear()
     search_box.send_keys(search_term)
     search_box.send_keys(Keys.ENTER)
 
+    # ===== B6: Lấy dữ liệu =====
     try:
-        # Chờ kết quả tải và kiểm tra phần thông tin tổng quan
-        wait.until(EC.presence_of_element_located(
-            (By.XPATH, "//div[contains(@class, 'kp-header')]")))  # Xác nhận phần tử chứa thông tin tổng quan
+        # Chờ kết quả và lấy thông tin (kno-rdesc hoặc các phần tử tương tự)
+        wait.until(EC.presence_of_element_located((By.XPATH, "//div[contains(@class, 'kp-header')]")))
+
+        # Cố gắng lấy dữ liệu từ phần thông tin AI (knowledge panel)
+        try:
+            ai_info_section = driver.find_element(By.XPATH, "//div[contains(@class, 'kno-rdesc')]")
+            ai_info = ai_info_section.text.strip() if ai_info_section else "Không có dữ liệu"
+            print(f"Thông tin tìm được: {ai_info}")
+        except Exception as e:
+            print(f"Lỗi khi lấy dữ liệu từ AI info: {e}")
+            ai_info = "Không lấy được thông tin từ AI info"
+
+        # Nếu không tìm thấy 'kno-rdesc', thử các XPath khác (ví dụ: lấy tên công ty từ phần tiêu đề)
+        if ai_info == "Không lấy được thông tin từ AI info":
+            try:
+                title_section = driver.find_element(By.XPATH, "//h2[contains(@class, 'kp-header')]")
+                ai_info = title_section.text.strip() if title_section else "Không tìm thấy thông tin tiêu đề"
+                print(f"Thông tin tìm được từ tiêu đề: {ai_info}")
+            except Exception as e:
+                print(f"Lỗi khi lấy dữ liệu từ tiêu đề: {e}")
+                ai_info = "Không lấy được thông tin tiêu đề"
 
     except Exception as e:
-        print(f"Lỗi khi tìm thấy phần tử: {e}")
-        continue
+        print(f"Lỗi khi tìm kiếm: {e}")
 
-    data = {"keyword": kw}
-
-    try:
-        # Tìm phần tử chứa thông tin tổng quan (không phụ thuộc vào vị trí)
-        ai_info_section = driver.find_element(By.XPATH, "//div[contains(@class, 'kno-rdesc')]")
-        data["ai_info"] = ai_info_section.text.strip() if ai_info_section else "Không có dữ liệu"
-    except Exception as e:
-        print(f"Lỗi khi lấy dữ liệu từ AI info: {e}")
-        data["ai_info"] = "Không lấy được thông tin"
-
-    print(data)
-    results.append(data)
-
-    # ===== Autosave sau mỗi record =====
-    out_df = pd.DataFrame(results)
-    out_file = "ket_qua_google_legal_name.xlsx"
-    out_df.to_excel(out_file, index=False)
-    print(f"Đã lưu kết quả sau từ khóa: {kw}")
+    # Lưu kết quả vào file Excel hoặc tiếp tục tìm kiếm
+    # (Tùy vào nhu cầu bạn có thể ghi vào file Excel hoặc tiếp tục tìm kiếm)
 
 # ===== Đóng trình duyệt =====
-print(f"\nTất cả kết quả đã được lưu vào: {out_file}")
-input("Nhấn Enter để đóng trình duyệt...")
 driver.quit()
