@@ -3,7 +3,7 @@ import pandas as pd
 import time
 import os
 
-START_URL = "https://shopeefood.vn/ha-noi/danh-sach-dia-diem-giao-tan-noi"
+START_URL = "https://shopeefood.vn/ho-chi-minh/danh-sach-dia-diem-giao-tan-noi"
 OUTPUT_FILE = "shopeefood_restaurants.csv"
 
 
