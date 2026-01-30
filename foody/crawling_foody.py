@@ -6,7 +6,7 @@ import os
 # ======================
 # CONFIG
 # ======================
-START_URL = "https://www.foody.vn/ha-noi/dia-diem?q=&ss=header_search_form"
+START_URL = "https://www.foody.vn/ha-noi"
 OUTPUT_FILE = "foody_restaurants.csv"
 
 
@@ -103,19 +103,28 @@ def load_more_by_button(page, max_round=100):
 def get_shop_links(page):
     links = set()
 
-    items = page.query_selector_all("div.foody-item a")
-    for a in items:
+    anchors = page.query_selector_all('a[href^="/ha-noi/"]')
+    for a in anchors:
         href = a.get_attribute("href")
         if not href:
             continue
 
-        if not href.startswith("/ha-noi/"):
+        # ❌ loại link khu vực / danh mục
+        if any(x in href for x in [
+            "/khu-vuc-",
+            "/quan-",
+            "/duong-",
+            "/bo-suu-tap",
+            "/top-",
+            "/tag",
+            "/binh-luan",
+            "/hinh-anh",
+            "/thuc-don",
+            "?"
+        ]):
             continue
 
-        # remove junk links
-        if "?" in href or "/food/" in href or "top-thanh-vien" in href:
-            continue
-
+        # ✔️ link quán luôn có ít nhất 2 dấu "-"
         if href.count("-") < 2:
             continue
 
@@ -128,41 +137,60 @@ def get_shop_links(page):
 # CRAWL SINGLE SHOP
 # ======================
 def crawl_single_shop(page, url):
+    if "/khu-vuc-" in url or "/quan-" in url:
+        print("⚠️ Link khu vực, bỏ qua:", url)
+        return False
     print("🌐 Mở shop:", url)
+
     try:
         page.goto(url, timeout=60000)
         page.wait_for_load_state("domcontentloaded")
-        time.sleep(1.5)
+        time.sleep(2)
 
         force_remove_login_popup(page)
 
-        name = None
-        name_el = page.query_selector("h1.main-title")
-        if name_el:
-            name = name_el.inner_text().strip()
+        # NAME
+        name_el = page.query_selector("h1")
+        name = name_el.inner_text().strip() if name_el else None
 
         if not name:
-            print("⚠️ Không phải trang quán, bỏ qua")
+            print("⚠️ Không lấy được tên quán")
             return False
 
-        address = None
-        addr_el = page.query_selector("span.street-address")
-        if addr_el:
-            address = addr_el.inner_text().strip()
+        # ADDRESS
+        address_el = page.query_selector('span[itemprop="streetAddress"]')
+        address = address_el.inner_text().strip() if address_el else None
 
+        # STATUS + OPENING HOURS (chuẩn Foody)
+        status = None
         opening_hours = None
-        hours_el = page.query_selector("div.time")
-        if hours_el:
-            opening_hours = hours_el.inner_text().strip()
+
+        time_block = page.query_selector("div.micro-timesopen")
+        if time_block:
+            # STATUS
+            status_el = time_block.query_selector("span.itsclosed, span.itsopen")
+            if status_el:
+                status = status_el.inner_text().strip()
+
+            # OPENING HOURS
+            hour_spans = time_block.query_selector_all(
+                "span:not(.itsclosed):not(.itsopen):not(.fa)"
+            )
+            for sp in hour_spans:
+                text = sp.inner_text().strip()
+                if ":" in text:
+                    opening_hours = text
+                    break
 
         auto_save({
             "Name": name,
             "Address": address,
+            "Status": status,
             "OpeningHours": opening_hours,
             "URL": url
         })
 
-        print(f"💾 Saved: {name} | {address}")
+        print(f"💾 Saved: {name}")
         return True
 
     except Exception as e:
@@ -175,8 +203,28 @@ def crawl_single_shop(page, url):
 # ======================
 def main():
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False)
-        page = browser.new_page(viewport={"width": 1280, "height": 800})
+        browser = p.chromium.launch(
+            channel="chrome",
+            headless=False,
+            args=[
+                "--disable-blink-features=AutomationControlled",
+                "--start-maximized"
+            ]
+        )
+
+        context = browser.new_context(
+            viewport=None,
+            user_agent=(
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/120.0.0.0 Safari/537.36"
+            )
+        )
+
+        context.add_init_script("""
+        Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+        """)
+        page = context.new_page()
 
         crawled = set()
         total_count = 0
@@ -189,7 +237,7 @@ def main():
         force_remove_login_popup(page)
 
         # load list
-        load_more_by_button(page)
+        load_more_by_button(page, max_round=2)
 
         shop_links = get_shop_links(page)
         print(f"🔗 Tìm thấy {len(shop_links)} quán hợp lệ")

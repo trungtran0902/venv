@@ -1,0 +1,5 @@
+https://www.foody.vn/__get/Place/HomeListPlace?t=1769743863628&page=1&lat=21.033333&lon=105.85&count=12&districtId=&cateId=&cuisineId=&isReputation=&type=1
+https://www.foody.vn/__get/Place/HomeListPlace?t=1769743864828&page=1&lat=21.033333&lon=105.85&count=12&districtId=&cateId=&cuisineId=&isReputation=&type=1
+https://www.foody.vn/__get/Place/HomeListPlace?t=1769743866029&page=1&lat=21.033333&lon=105.85&count=12&districtId=&cateId=&cuisineId=&isReputation=&type=1
+https://www.foody.vn/__get/Place/HomeListPlace?t=1769743867229&page=1&lat=21.033333&lon=105.85&count=12&districtId=&cateId=&cuisineId=&isReputation=&type=1
+https://www.foody.vn/__get/Place/HomeListPlace?t=1769743868430&page=1&lat=21.033333&lon=105.85&count=12&districtId=&cateId=&cuisineId=&isReputation=&type=1

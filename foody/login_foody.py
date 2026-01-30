@@ -1,12 +1,19 @@
 from playwright.sync_api import sync_playwright
 
 with sync_playwright() as p:
-    browser = p.chromium.launch_persistent_context(
-        user_data_dir="foody_profile",
-        headless=False
-    )
-    page = browser.new_page()
+    browser = p.chromium.launch(headless=False)
+    context = browser.new_context()
+    page = context.new_page()
+
     page.goto("https://www.foody.vn")
 
-    print("👉 HÃY LOGIN BẰNG TAY, XONG THÌ ĐÓNG TAB")
-    page.wait_for_timeout(600000)  # 10 phút
+    print("👉 Đăng nhập Foody bằng tay (Google / Facebook / Email)")
+    print("👉 Sau khi login xong, CHỜ 5–10s")
+
+    page.wait_for_timeout(60000)  # 60 giây cho bạn login
+
+    # LƯU COOKIE
+    context.storage_state(path="foody_state.json")
+    print("✅ Đã tạo foody_state.json")
+
+    browser.close()

@@ -40,7 +40,7 @@ def kill_all_popups(page):
 
 def get_shop_links(page):
     links = set()
-    anchors = page.query_selector_all('a[href^="/ha-noi/"]')
+    anchors = page.query_selector_all('a[href^="/ho-chi-minh/"]')
 
     for a in anchors:
         href = a.get_attribute("href")
@@ -48,7 +48,7 @@ def get_shop_links(page):
             continue
 
         # loại link category
-        if href in ["/ha-noi/fmcg", "/ha-noi/flowers", "/ha-noi/liquor", "/ha-noi/medicine", "/ha-noi/fresh", "/ha-noi/pets"]:
+        if href in ["/ho-chi-minh/fmcg", "/ho-chi-minh/flowers", "/ho-chi-minh/liquor", "/ho-chi-minh/medicine", "/ho-chi-minh/fresh", "/ho-chi-minh/pets"]:
             continue
 
         if "danh-sach" in href:
@@ -189,7 +189,7 @@ def main():
         crawled = set()
         page_index = 1
 
-        print("🌐 Mở danh sách địa điểm giao tận nơi (Hà Nội)...")
+        print("🌐 Mở danh sách địa điểm giao tận nơi (Hồ Chí Minh)...")
         page.goto(START_URL, timeout=60000)
         page.wait_for_load_state("domcontentloaded")
         time.sleep(4)
