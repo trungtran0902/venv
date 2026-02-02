@@ -5,6 +5,7 @@ import os
 
 # ======================
 # CONFIG
+
 # ======================
 START_URL = "https://www.foody.vn/ha-noi"
 OUTPUT_FILE = "foody_restaurants.csv"

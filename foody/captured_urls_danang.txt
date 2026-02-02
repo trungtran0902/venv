@@ -1,0 +1,1 @@
+https://www.foody.vn/__get/Place/HomeListPlace?t=1770021203385&page=1&lat=16.051571&lon=108.214897&count=12&districtId=&cateId=&cuisineId=&isReputation=&type=1
