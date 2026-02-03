@@ -1,1 +1,6 @@
-playwright>=1.40.0
+streamlit
+pandas
+openpyxl
+unidecode
+rapidfuzz
+geopy
