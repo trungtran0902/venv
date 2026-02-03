@@ -13,7 +13,7 @@ with sync_playwright() as p:
     page.wait_for_timeout(60000)  # 60 giây cho bạn login
 
     # LƯU COOKIE
-    context.storage_state(path="foody_state.json")
-    print("✅ Đã tạo foody_state.json")
+    context.storage_state(path="foody_state_hcm.json")
+    print("✅ Đã tạo foody_state_hcm.json")
 
     browser.close()

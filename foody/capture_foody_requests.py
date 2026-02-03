@@ -3,8 +3,8 @@ import json
 import time
 import os
 
-STATE_FILE = os.path.join(os.path.dirname(__file__), "foody_state.json")
-OUTPUT_FILE = os.path.join(os.path.dirname(__file__), "captured_urls_danang.txt")
+STATE_FILE = os.path.join(os.path.dirname(__file__), "foody_state_hcm.json")
+OUTPUT_FILE = os.path.join(os.path.dirname(__file__), "captured_urls_HCM.txt")
 
 def load_cookies(file_path):
     try:
@@ -20,6 +20,16 @@ def load_cookies(file_path):
         return data
     return []
 
+def save_urls(urls, file_path):
+    """Auto-save URLs to file"""
+    try:
+        with open(file_path, "w", encoding="utf-8") as f:
+            for url in urls:
+                f.write(url + "\n")
+        print(f"  💾 Auto-saved {len(urls)} links to file")
+    except Exception as e:
+        print(f"  ✗ Failed to auto-save: {e}")
+
 def main():
     cookies = load_cookies(STATE_FILE)
     captured_urls = []
@@ -28,7 +38,7 @@ def main():
         browser = p.chromium.launch(headless=False)
         # Force geolocation and locale to Hanoi to avoid server using wrong region
         context = browser.new_context(
-            geolocation={"latitude": 16.051571, "longitude": 108.214897},
+            geolocation={"latitude": 10.823099, "longitude": 106.629664},
             permissions=["geolocation"],
             locale="vi-VN"
         )
@@ -57,8 +67,11 @@ def main():
             if "/__get/Place/HomeListPlace" in url:
                 purl = urlparse(url)
                 qs = parse_qs(purl.query)
-                qs['lat'] = [str(16.051571)]
-                qs['lon'] = [str(108.214897)]
+                qs['lat'] = [str(10.823099)]
+                qs['lon'] = [str(106.629664)]
+                qs['CityId'] = ['217']      # QUAN TRỌNG
+                qs['districtId'] = ['']     # optional – để all quận
+
                 # flatten values
                 new_q = urlencode({k: v[0] for k, v in qs.items()})
                 new_url = urlunparse((purl.scheme, purl.netloc, purl.path, purl.params, new_q, purl.fragment))
@@ -81,6 +94,9 @@ def main():
             if "/__get/Place/HomeListPlace" in url:
                 print(f"[{len(captured_urls)+1}] Captured API: {url}")
                 captured_urls.append(url)
+                # Auto-save every 5 links
+                if len(captured_urls) % 5 == 0:
+                    save_urls(captured_urls, OUTPUT_FILE)
 
         page.on("request", on_request)
 
@@ -118,14 +134,15 @@ def main():
 
         try:
             # Change this URL to the Foody page you normally use
-            start_url = "https://www.foody.vn/da-nang"
+            start_url = "https://www.foody.vn/ho-chi-minh/"
+            
             print("Navigating to", start_url)
             page.goto(start_url, timeout=60000)
             print("✓ Page loaded, waiting for initial requests...")
             time.sleep(2)
 
             # Scroll and click "Xem thêm" button multiple times (until no more button)
-            for i in range(100):  # Max 100 rounds, but will break when no more button
+            for i in range(1000):  # Max 1000 rounds, but will break when no more button
                 print(f"\n[Round {i+1}] Scrolling down...")
                 try:
                     page.evaluate("window.scrollBy(0, document.body.scrollHeight)")

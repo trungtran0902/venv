@@ -85,7 +85,7 @@ def main():
     })
 
     # Excel
-    excel_file = "foody_data_hanoi.xlsx"
+    excel_file = "foody_data_test.xlsx"
     wb, ws = init_excel(excel_file)
 
     # số dòng đã có
