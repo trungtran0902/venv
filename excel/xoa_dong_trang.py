@@ -52,4 +52,4 @@ if uploaded_file is not None:
     except Exception as e:
         st.error("❌ Có lỗi khi xử lý file Excel")
         st.exception(e)
-#== dùng lệnh này để chạy streamlit run xem_excel.py trên terminal ===
+#== dùng lệnh này để chạy "streamlit run xem_excel.py" trên terminal ===

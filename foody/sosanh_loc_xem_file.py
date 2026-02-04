@@ -102,6 +102,15 @@ def run_compare(
 
     return df
 
+def color_result(val):
+    if "Trùng quán" in val:
+        return "background-color: #C8E6C9"
+    if "Trùng địa chỉ" in val:
+        return "background-color: #FFF9C4"
+    if "Khác" in val:
+        return "background-color: #FFCDD2"
+    return ""
+
 # ======================================================
 # B1 – UPLOAD FILE
 # ======================================================
@@ -111,6 +120,15 @@ if uploaded_file:
     df = pd.read_excel(uploaded_file)
     df.columns = df.columns.str.strip()
     columns = df.columns.tolist()
+
+    total_rows = len(df)
+    total_cols = len(df.columns)
+
+    c1, c2 = st.columns(2)
+    with c1:
+        st.metric("📄 Tổng số dòng", f"{total_rows:,}")
+    with c2:
+        st.metric("📊 Tổng số cột", f"{total_cols}")
 
     # ==================================================
     # B2 – CHỌN CHỨC NĂNG
@@ -162,7 +180,11 @@ if uploaded_file:
             selected = st.multiselect("Chọn giá trị", values, default=values)
 
             filtered_df = result_df[result_df[filter_col].astype(str).isin(selected)]
-            st.dataframe(filtered_df, use_container_width=True)
+
+            st.dataframe(
+                filtered_df.style.applymap(color_result, subset=["Kết luận"]),
+                use_container_width=True
+            )
 
     # ==================================================
     # TH2 – CHỈ XEM FILE EXCEL
@@ -175,7 +197,10 @@ if uploaded_file:
         selected = st.multiselect("Chọn giá trị", values, default=values)
 
         filtered_df = df[df[filter_col].astype(str).isin(selected)]
-        st.dataframe(filtered_df, use_container_width=True)
+        st.dataframe(
+            filtered_df.style.applymap(color_result, subset=["Kết luận"]),
+            use_container_width=True
+        )
 
     # ==================================================
     # EXPORT (CHUNG CHO CẢ 2 TH)
