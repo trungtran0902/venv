@@ -2,4 +2,3 @@ streamlit
 pandas
 requests
 numpy
-shapely==2.0.3
