@@ -2,3 +2,7 @@ streamlit
 pandas
 requests
 numpy
+shapely
+geopandas
+fiona
+pyproj
