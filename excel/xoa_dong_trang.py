@@ -1,39 +1,55 @@
+import streamlit as st
 import pandas as pd
-import tkinter as tk
-from tkinter import filedialog
-import os
+from io import BytesIO
 
-# B1: Mở hộp thoại chọn file Excel
-root = tk.Tk()
-root.withdraw()  # Ẩn cửa sổ chính
-
-input_file = filedialog.askopenfilename(
-    title="Chọn file Excel",
-    filetypes=[("Excel files", "*.xlsx *.xls")]
+st.set_page_config(
+    page_title="Xóa dòng trống Excel",
+    page_icon="📊",
+    layout="centered"
 )
 
-if not input_file:
-    print("❌ Không chọn file. Kết thúc chương trình.")
-    exit()
+st.title("📊 Xóa dòng trống trong Excel")
+st.write("Upload file Excel → hệ thống sẽ tự động xóa các dòng trống.")
 
-# B2: Đọc file Excel
-df = pd.read_excel(input_file)
+# Upload file
+uploaded_file = st.file_uploader(
+    "📂 Chọn file Excel",
+    type=["xlsx", "xls"]
+)
 
-# B3: Xóa các dòng trắng
-# - Xóa dòng mà toàn bộ ô rỗng
-df_clean = df.dropna(how="all")
+if uploaded_file is not None:
+    try:
+        # Đọc file Excel
+        df = pd.read_excel(uploaded_file)
 
-# - Xóa dòng mà cột 'Tên' rỗng (nếu có cột này)
-if "Tên" in df_clean.columns:
-    df_clean = df_clean.dropna(subset=["Tên"])
+        st.subheader("🔍 Xem trước dữ liệu (10 dòng đầu)")
+        st.dataframe(df.head(10))
 
-# B4: Tạo đường dẫn file output
-folder = os.path.dirname(input_file)
-filename = os.path.splitext(os.path.basename(input_file))[0]
-output_file = os.path.join(folder, f"{filename}_clean.xlsx")
+        # Nút xử lý
+        if st.button("🚀 Xóa dòng trống"):
+            # Xóa các dòng trống hoàn toàn
+            df_clean = df.dropna(how="all")
 
-# B5: Lưu file mới
-df_clean.to_excel(output_file, index=False)
+            st.success(
+                f"✅ Đã xóa {len(df) - len(df_clean)} dòng trống"
+            )
 
-print("✅ Hoàn tất!")
-print("📂 File đã lưu:", output_file)
+            # Ghi file ra bộ nhớ
+            output = BytesIO()
+            with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+                df_clean.to_excel(writer, index=False, sheet_name="Data")
+
+            output.seek(0)
+
+            # Download
+            st.download_button(
+                label="⬇️ Tải file Excel đã xử lý",
+                data=output,
+                file_name="excel_da_xoa_dong_trong.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+
+    except Exception as e:
+        st.error("❌ Có lỗi khi xử lý file Excel")
+        st.exception(e)
+#== dùng lệnh này để chạy streamlit run xem_excel.py trên terminal ===
