@@ -1,4 +1,4 @@
-os
-json
-shape
-explain_validity
+streamlit
+pandas
+requests
+shapely
