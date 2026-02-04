@@ -1,8 +1,2 @@
-streamlit
-pandas
-requests
-numpy
-shapely
-geopandas
-fiona
-pyproj
+streamlit>=1.30
+shapely>=2.0
