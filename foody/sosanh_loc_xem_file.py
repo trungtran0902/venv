@@ -173,18 +173,47 @@ if uploaded_file:
         if st.session_state.result_df is not None:
             result_df = st.session_state.result_df
 
+            # ======================================================
+            # LỌC KẾT QUẢ - THÊM ĐIỀU KIỆN LỌC
+            # ======================================================
+            if 'filter_conditions' not in st.session_state:
+                st.session_state.filter_conditions = []
+
+            # Thêm điều kiện lọc mới khi nhấn nút
+            if st.button("➕ Thêm điều kiện lọc"):
+                # Mỗi điều kiện sẽ là một tuple gồm (column_name, selected_values)
+                st.session_state.filter_conditions.append({"column": None, "values": []})
+
+            # Hiển thị các bộ lọc hiện tại
+            for idx, condition in enumerate(st.session_state.filter_conditions):
+                col_name = st.selectbox(
+                    f"Chọn cột để lọc - Điều kiện {idx + 1}",
+                    columns,
+                    key=f"filter_col_{idx}"
+                )
+                selected_values = st.multiselect(
+                    f"Chọn giá trị cho {col_name} - Điều kiện {idx + 1}",
+                    df[col_name].dropna().astype(str).unique().tolist(),
+                    default=df[col_name].dropna().astype(str).unique().tolist(),
+                    key=f"filter_values_{idx}"
+                )
+
+                # Lưu lại giá trị đã chọn
+                st.session_state.filter_conditions[idx]["column"] = col_name
+                st.session_state.filter_conditions[idx]["values"] = selected_values
+
+            # Lọc dữ liệu theo các điều kiện đã chọn (Áp dụng theo kiểu "và" - AND)
+            filtered_df = result_df.copy()
+
+            # Duyệt qua tất cả các điều kiện lọc và áp dụng "và" (AND)
+            for condition in st.session_state.filter_conditions:
+                if condition["column"] and condition["values"]:
+                    # Áp dụng lọc với "và" (AND) - chỉ chọn những bản ghi thỏa mãn tất cả các điều kiện
+                    filtered_df = filtered_df[filtered_df[condition["column"]].isin(condition["values"])]
+
+            # Hiển thị bảng dữ liệu đã lọc
             st.subheader("🔎 Lọc kết quả")
-            filter_col = st.selectbox("Chọn cột để lọc", result_df.columns, key="f1")
-
-            values = result_df[filter_col].dropna().astype(str).unique().tolist()
-            selected = st.multiselect("Chọn giá trị", values, default=values)
-
-            filtered_df = result_df[result_df[filter_col].astype(str).isin(selected)]
-
-            st.dataframe(
-                filtered_df.style.applymap(color_result, subset=["Kết luận"]),
-                use_container_width=True
-            )
+            st.dataframe(filtered_df.style.applymap(color_result, subset=["Kết luận"]), use_container_width=True)
 
     # ==================================================
     # TH2 – CHỈ XEM FILE EXCEL
@@ -218,5 +247,6 @@ if uploaded_file:
 
 else:
     st.info("👆 Vui lòng chọn file Excel để bắt đầu.")
+
 
 #=== dùng lệnh "streamlit run sosanh_loc_xem_file.py" chạy trong ternimal==
