@@ -1,52 +1,66 @@
+import streamlit as st
 import json
-import glob
-import os
-import tkinter as tk
-from tkinter import filedialog
 
-# Ẩn cửa sổ chính
-root = tk.Tk()
-root.withdraw()
+st.set_page_config(page_title="GeoJSON Merger", layout="wide")
 
-# Chọn thư mục
-folder_path = filedialog.askdirectory(title="Chọn thư mục chứa các file GeoJSON")
+st.title("🗺️ Merge Multiple GeoJSON Files")
+st.write("Upload multiple .geojson files to merge them into one FeatureCollection.")
 
-if not folder_path:
-    print("Bạn chưa chọn thư mục.")
-    exit()
+uploaded_files = st.file_uploader(
+    "📂 Upload GeoJSON files",
+    type=["geojson"],
+    accept_multiple_files=True
+)
 
-# Lấy file
-files = glob.glob(os.path.join(folder_path, "*.geojson"))
+if uploaded_files:
 
-if not files:
-    print("Không tìm thấy file GeoJSON.")
-    exit()
+    all_features = []
+    error_files = []
 
-all_features = []
+    with st.spinner("Processing files..."):
+        for file in uploaded_files:
+            try:
+                data = json.load(file)
 
-# Đọc từng file và giữ nguyên feature
-for file in files:
-    with open(file, "r", encoding="utf-8") as f:
-        data = json.load(f)
+                if data["type"] == "FeatureCollection":
+                    all_features.extend(data["features"])
 
-        if data["type"] == "FeatureCollection":
-            all_features.extend(data["features"])
+                elif data["type"] == "Feature":
+                    all_features.append(data)
 
-        elif data["type"] == "Feature":
-            all_features.append(data)
+                else:
+                    error_files.append(file.name)
 
-# Tạo FeatureCollection mới
-merged_geojson = {
-    "type": "FeatureCollection",
-    "features": all_features
-}
+            except Exception:
+                error_files.append(file.name)
 
-# Xuất file
-output_path = os.path.join(folder_path, "merged_keep_features.geojson")
+    if error_files:
+        st.warning("⚠ Some files could not be processed:")
+        for f in error_files:
+            st.write(f"- {f}")
 
-with open(output_path, "w", encoding="utf-8") as f:
-    json.dump(merged_geojson, f, ensure_ascii=False)
+    if all_features:
+        merged_geojson = {
+            "type": "FeatureCollection",
+            "features": all_features
+        }
 
-print("✅ Đã merge xong!")
-print(f"📁 File xuất tại: {output_path}")
-print(f"📊 Tổng số feature: {len(all_features)}")
+        st.success(f"✅ Merge completed!")
+        st.info(f"📊 Total features: {len(all_features)}")
+
+        # Preview JSON (optional)
+        with st.expander("🔍 Preview merged JSON"):
+            st.json(merged_geojson)
+
+        # Download button
+        st.download_button(
+            label="⬇ Download merged GeoJSON",
+            data=json.dumps(merged_geojson, ensure_ascii=False, indent=2),
+            file_name="merged.geojson",
+            mime="application/json"
+        )
+
+    else:
+        st.error("❌ No valid GeoJSON features found.")
+else:
+    st.info("Please upload at least one GeoJSON file.")
