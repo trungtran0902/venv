@@ -1,6 +1,5 @@
 streamlit
 pandas
-openpyxl
-xlsxwriter
-glob
-tkinter
+numpy
+geopandas
+shapely
