@@ -8,7 +8,7 @@ import os
 
 st.set_page_config(page_title="GeoJSON Region Union", layout="wide")
 
-st.title("🗺️ Merge Selected GeoJSON Files into ONE Large Region")
+st.title("🗺️ Merge Polygon GeoJSON Lựa Chọn")
 
 uploaded_files = st.file_uploader(
     "📂 Upload GeoJSON files",
