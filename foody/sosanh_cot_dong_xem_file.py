@@ -39,6 +39,14 @@ def safe_float(x):
     except:
         return None
 
+def calc_distance(lat1, lng1, lat2, lng2):
+    if any(v is None for v in [lat1, lng1, lat2, lng2]):
+        return None
+    try:
+        return round(geodesic((lat1, lng1), (lat2, lng2)).meters, 2)
+    except:
+        return None
+
 # ======================================================
 # B1 – UPLOAD FILE
 # ======================================================
@@ -170,23 +178,30 @@ if uploaded_file:
             df["name_norm"] = df[col_name].apply(normalize_text)
 
             # Tạo một cột để lưu kết quả so sánh
-            def compare(row):
+            def compare(row, df):
                 name_score = fuzz.token_set_ratio(row["name_norm"], row["name_norm"])
-                if name_score >= name_thr:
-                    return pd.Series(["Trùng quán (tên gần đúng)", name_score])
-                return pd.Series(["Khác", 0])
+                # So sánh mỗi dòng với tất cả các dòng khác
+                similar_rows = []
+                for idx, compare_row in df.iterrows():
+                    if fuzz.token_set_ratio(row["name_norm"], compare_row["name_norm"]) >= name_thr and row.name != compare_row.name:
+                        similar_rows.append(compare_row.name)
+                return similar_rows
 
-            # So sánh tên quán giữa các dòng trong cột
-            df[["Kết luận", "Điểm giống tên"]] = df.apply(compare, axis=1)
+            # Áp dụng so sánh với tất cả các dòng
+            df["Trùng với"] = df.apply(compare, axis=1, df=df)
 
             # Lọc những dòng có tên giống nhau hoặc gần giống
-            result_df = df[df["Kết luận"] == "Trùng quán (tên gần đúng)"]
+            result_df = df[df["Trùng với"].apply(len) > 0]
 
             if result_df.empty:
                 st.warning("Không tìm thấy dòng nào trùng tên gần đúng.")
             else:
+                # Sắp xếp các dòng trùng nhau cạnh nhau
+                result_df = result_df.explode("Trùng với")
+
+                # Hiển thị kết quả đã sắp xếp
                 st.subheader("🔎 Kết quả trùng tên gần đúng")
-                st.dataframe(result_df.style.applymap(lambda val: "background-color: #FFF9C4" if val == "Trùng quán (tên gần đúng)" else "", subset=["Kết luận"]), use_container_width=True)
+                st.dataframe(result_df.style.applymap(lambda val: "background-color: #FFF9C4" if val != "" else "", subset=["Trùng với"]), use_container_width=True)
 
     # ==================================================
     # EXPORT (CHUNG CHO CẢ 3 TH)
