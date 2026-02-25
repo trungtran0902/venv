@@ -78,6 +78,9 @@ if uploaded_files:
                     crs=combined_gdf.crs
                 )
 
+                # Tạo properties cho merged geometry
+                merged_gdf["properties"] = [{"name": output_filename}]
+
                 # Chuyển GeoDataFrame thành GeoJSON
                 merged_geojson = json.loads(merged_gdf.to_json())
 
