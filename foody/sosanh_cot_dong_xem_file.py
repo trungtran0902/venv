@@ -3,7 +3,6 @@ import pandas as pd
 from io import BytesIO
 from unidecode import unidecode
 from rapidfuzz import fuzz
-from geopy.distance import geodesic
 import math
 
 # ======================================================
@@ -39,77 +38,6 @@ def safe_float(x):
         return v
     except:
         return None
-
-def calc_distance(lat1, lng1, lat2, lng2):
-    if any(v is None for v in [lat1, lng1, lat2, lng2]):
-        return None
-    try:
-        return round(geodesic((lat1, lng1), (lat2, lng2)).meters, 2)
-    except:
-        return None
-
-def run_compare(
-    df,
-    col_name_1, col_name_2,
-    col_addr_1, col_addr_2,
-    col_lat_1, col_lng_1,
-    col_lat_2, col_lng_2,
-    name_thr, addr_thr, dist_thr
-):
-    df = df.copy()
-
-    df["ten_norm"] = df[col_name_1].apply(normalize_text)
-    df["name_norm"] = df[col_name_2].apply(normalize_text)
-    df["addr1_norm"] = df[col_addr_1].apply(normalize_text)
-    df["addr2_norm"] = df[col_addr_2].apply(normalize_text)
-
-    df["lat1"] = df[col_lat_1].apply(safe_float)
-    df["lng1"] = df[col_lng_1].apply(safe_float)
-    df["lat2"] = df[col_lat_2].apply(safe_float)
-    df["lng2"] = df[col_lng_2].apply(safe_float)
-
-    def compare(row):
-        name_score = fuzz.token_set_ratio(row["ten_norm"], row["name_norm"])
-        name_exact = row["ten_norm"] == row["name_norm"] and row["ten_norm"] != ""
-
-        if name_exact:
-            return pd.Series(["Trùng quán (tên chính xác)", 100, name_score, None])
-        if name_score >= name_thr:
-            return pd.Series(["Trùng quán (tên gần đúng)", name_score, name_score, None])
-
-        addr_score = fuzz.token_set_ratio(row["addr1_norm"], row["addr2_norm"])
-        if addr_score >= addr_thr:
-            return pd.Series(["Trùng địa chỉ", addr_score, name_score, None])
-
-        distance_m = calc_distance(
-            row["lat1"], row["lng1"], row["lat2"], row["lng2"]
-        )
-
-        if distance_m is not None and distance_m <= dist_thr:
-            return pd.Series(["Gần nhau nhưng khác địa chỉ", 40, name_score, distance_m])
-        if distance_m is not None:
-            return pd.Series(["Khác", 0, name_score, distance_m])
-
-        return pd.Series(["Thiếu tọa độ", 0, name_score, None])
-
-    df[["Kết luận", "Độ tin cậy (%)", "Điểm giống tên", "Khoảng cách (m)"]] = df.apply(compare, axis=1)
-
-    df.drop(columns=[
-        "ten_norm", "name_norm",
-        "addr1_norm", "addr2_norm",
-        "lat1", "lng1", "lat2", "lng2"
-    ], inplace=True)
-
-    return df
-
-def color_result(val):
-    if "Trùng quán" in val:
-        return "background-color: #C8E6C9"
-    if "Trùng địa chỉ" in val:
-        return "background-color: #FFF9C4"
-    if "Khác" in val:
-        return "background-color: #FFCDD2"
-    return ""
 
 # ======================================================
 # B1 – UPLOAD FILE
@@ -230,45 +158,42 @@ if uploaded_file:
     # TH3 – SO SÁNH THEO DÒNG
     # ==================================================
     elif mode.startswith("TH3"):
-        st.subheader("🧠 So sánh theo dòng")
+        st.subheader("🧠 So sánh theo dòng (Tìm trùng tên quán)")
 
-        # Lựa chọn cột để so sánh
-        col_name_1 = st.selectbox("Tên (nguồn 1)", columns, key="c_n1")
-        col_name_2 = st.selectbox("Tên (nguồn 2)", columns, key="c_n2")
+        # Lựa chọn cột để so sánh (tên quán)
+        col_name = st.selectbox("Chọn cột để so sánh (ví dụ: Tên quán)", columns, key="col_name")
 
         name_thr = st.slider("Ngưỡng giống TÊN", 0, 100, 90)
 
         if st.button("▶️ Chạy so sánh theo dòng"):
-            st.session_state.result_df = run_compare(
-                df,
-                col_name_1, col_name_2,
-                "", "", "", "", "", "",  # Không cần địa chỉ và tọa độ
-                name_thr, 0, 0  # Chỉ so sánh tên
-            )
+            # Chuẩn hóa tên trong cột được chọn
+            df["name_norm"] = df[col_name].apply(normalize_text)
 
-        if st.session_state.result_df is not None:
-            result_df = st.session_state.result_df
+            # Tạo một cột để lưu kết quả so sánh
+            def compare(row):
+                name_score = fuzz.token_set_ratio(row["name_norm"], row["name_norm"])
+                if name_score >= name_thr:
+                    return pd.Series(["Trùng quán (tên gần đúng)", name_score])
+                return pd.Series(["Khác", 0])
 
-            # Lọc theo tên trùng khớp
-            st.subheader("🔎 Lọc theo tên")
-            name_filter = st.radio("Chọn lọc theo tên", ["Tất cả", "Tên chính xác", "Tên gần đúng"])
-            if name_filter == "Tên chính xác":
-                filtered_df = result_df[result_df["Kết luận"] == "Trùng quán (tên chính xác)"]
-            elif name_filter == "Tên gần đúng":
-                filtered_df = result_df[result_df["Kết luận"] == "Trùng quán (tên gần đúng)"]
+            # So sánh tên quán giữa các dòng trong cột
+            df[["Kết luận", "Điểm giống tên"]] = df.apply(compare, axis=1)
+
+            # Lọc những dòng có tên giống nhau hoặc gần giống
+            result_df = df[df["Kết luận"] == "Trùng quán (tên gần đúng)"]
+
+            if result_df.empty:
+                st.warning("Không tìm thấy dòng nào trùng tên gần đúng.")
             else:
-                filtered_df = result_df
-
-            # Hiển thị bảng dữ liệu đã lọc
-            st.subheader("🔎 Kết quả đã lọc")
-            st.dataframe(filtered_df.style.applymap(color_result, subset=["Kết luận"]), use_container_width=True)
+                st.subheader("🔎 Kết quả trùng tên gần đúng")
+                st.dataframe(result_df.style.applymap(lambda val: "background-color: #FFF9C4" if val == "Trùng quán (tên gần đúng)" else "", subset=["Kết luận"]), use_container_width=True)
 
     # ==================================================
     # EXPORT (CHUNG CHO CẢ 3 TH)
     # ==================================================
     buffer = BytesIO()
     with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
-        filtered_df.to_excel(writer, index=False, sheet_name="Filtered")
+        df.to_excel(writer, index=False, sheet_name="Filtered")
 
     st.download_button(
         "⬇️ Tải Excel đã lọc",
