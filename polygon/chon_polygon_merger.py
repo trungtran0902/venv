@@ -50,6 +50,10 @@ if uploaded_files:
 
                         # Đọc bằng geopandas
                         gdf = gpd.read_file(tmp_path)
+
+                        # Thêm trường "name" vào properties của từng feature
+                        gdf["properties"] = gdf.apply(lambda row: {"name": output_filename}, axis=1)
+
                         gdfs.append(gdf)
 
                         os.remove(tmp_path)
@@ -68,17 +72,11 @@ if uploaded_files:
                 # Union toàn bộ geometry
                 merged_geometry = unary_union(combined_gdf.geometry)
 
-                # Thêm trường "name" vào properties
-                merged_properties = {"name": output_filename}
-
                 # Tạo GeoDataFrame mới với geometry và properties
                 merged_gdf = gpd.GeoDataFrame(
                     geometry=[merged_geometry],
                     crs=combined_gdf.crs
                 )
-
-                # Gán giá trị "name" vào properties
-                merged_gdf["properties"] = merged_properties
 
                 # Chuyển GeoDataFrame thành GeoJSON
                 merged_geojson = json.loads(merged_gdf.to_json())
