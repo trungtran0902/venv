@@ -1,52 +1,87 @@
+import streamlit as st
 import json
-import glob
+import geopandas as gpd
+import pandas as pd
+from shapely.ops import unary_union
+import tempfile
 import os
-import tkinter as tk
-from tkinter import filedialog
 
-# Ẩn cửa sổ chính
-root = tk.Tk()
-root.withdraw()
+st.set_page_config(page_title="GeoJSON Region Union", layout="wide")
 
-# Chọn thư mục
-folder_path = filedialog.askdirectory(title="Chọn thư mục chứa các file GeoJSON")
+st.title("🗺️ Merge Selected GeoJSON Files into ONE Large Region")
 
-if not folder_path:
-    print("Bạn chưa chọn thư mục.")
-    exit()
+uploaded_files = st.file_uploader(
+    "📂 Upload GeoJSON files",
+    type=["geojson"],
+    accept_multiple_files=True
+)
 
-# Lấy file
-files = glob.glob(os.path.join(folder_path, "*.geojson"))
+if uploaded_files:
 
-if not files:
-    print("Không tìm thấy file GeoJSON.")
-    exit()
+    file_names = [file.name for file in uploaded_files]
 
-all_features = []
+    selected_files = st.multiselect(
+        "📌 Select files to merge",
+        options=file_names
+    )
 
-# Đọc từng file và giữ nguyên feature
-for file in files:
-    with open(file, "r", encoding="utf-8") as f:
-        data = json.load(f)
+    if selected_files:
 
-        if data["type"] == "FeatureCollection":
-            all_features.extend(data["features"])
+        gdfs = []
 
-        elif data["type"] == "Feature":
-            all_features.append(data)
+        with st.spinner("Processing geometries..."):
 
-# Tạo FeatureCollection mới
-merged_geojson = {
-    "type": "FeatureCollection",
-    "features": all_features
-}
+            for file in uploaded_files:
+                if file.name in selected_files:
 
-# Xuất file
-output_path = os.path.join(folder_path, "merged_keep_features.geojson")
+                    # Lưu file tạm
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".geojson") as tmp:
+                        tmp.write(file.getvalue())
+                        tmp_path = tmp.name
 
-with open(output_path, "w", encoding="utf-8") as f:
-    json.dump(merged_geojson, f, ensure_ascii=False)
+                    # Đọc bằng geopandas
+                    gdf = gpd.read_file(tmp_path)
+                    gdfs.append(gdf)
 
-print("✅ Đã merge xong!")
-print(f"📁 File xuất tại: {output_path}")
-print(f"📊 Tổng số feature: {len(all_features)}")
+                    os.remove(tmp_path)
+
+        if gdfs:
+
+            # Gộp tất cả lại
+            combined_gdf = gpd.GeoDataFrame(
+                pd.concat(gdfs, ignore_index=True),
+                crs=gdfs[0].crs
+            )
+
+            # Sửa geometry lỗi nếu có
+            combined_gdf["geometry"] = combined_gdf["geometry"].buffer(0)
+
+            # Union toàn bộ geometry
+            merged_geometry = unary_union(combined_gdf.geometry)
+
+            merged_gdf = gpd.GeoDataFrame(
+                geometry=[merged_geometry],
+                crs=combined_gdf.crs
+            )
+
+            merged_geojson = json.loads(merged_gdf.to_json())
+
+            st.success("✅ Merge thành công thành 1 vùng duy nhất!")
+            st.info(f"📊 Số vùng ban đầu: {len(combined_gdf)}")
+            st.info("🗺️ Sau merge: 1 geometry")
+
+            with st.expander("🔍 Preview merged GeoJSON"):
+                st.json(merged_geojson)
+
+            st.download_button(
+                label="⬇ Download merged region",
+                data=json.dumps(merged_geojson, indent=2),
+                file_name="merged_region.geojson",
+                mime="application/json"
+            )
+
+    else:
+        st.info("Chọn ít nhất 1 file để merge.")
+
+else:
+    st.info("Upload ít nhất 1 file GeoJSON.")
