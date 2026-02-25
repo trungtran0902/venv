@@ -193,19 +193,17 @@ if uploaded_file:
                 st.subheader("🔎 Kết quả trùng tên gần đúng")
                 st.dataframe(result_df.style.applymap(lambda val: "background-color: #FFF9C4" if val != "" else "", subset=["Trùng với"]), use_container_width=True)
 
-    # ==================================================
-    # EXPORT (CHUNG CHO CẢ 3 TH)
-    # ==================================================
-    buffer = BytesIO()
-    with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
-        df.to_excel(writer, index=False, sheet_name="Filtered")
+                # Export (Download button)
+                buffer = BytesIO()
+                with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+                    result_df.to_excel(writer, index=False, sheet_name="Filtered")
 
-    st.download_button(
-        "⬇️ Tải Excel đã lọc",
-        data=buffer.getvalue(),
-        file_name="excel_da_loc.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
+                st.download_button(
+                    "⬇️ Tải Excel đã lọc",
+                    data=buffer.getvalue(),
+                    file_name="excel_trung_ten.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
 
 else:
     st.info("👆 Vui lòng chọn file Excel để bắt đầu.")
