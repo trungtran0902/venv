@@ -48,6 +48,34 @@ def distance_km(lat1, lon1, lat2, lon2):
     return R * c
 
 # ======================
+# ENSURE SEARCH BOX
+# ======================
+SEARCH_SELECTORS = [
+    "input[role='combobox']",
+    "input[aria-label*='Tìm kiếm']",
+    "input[aria-label*='Search']",
+]
+
+def ensure_search_box(page, timeout=15000):
+    for s in SEARCH_SELECTORS:
+        try:
+            loc = page.wait_for_selector(s, timeout=3000, state="visible")
+            if loc:
+                return loc
+        except:
+            pass
+
+    print("⚠️ Không thấy search box → reload Google Maps")
+    page.goto("https://www.google.com/maps?hl=vi", timeout=60000)
+    time.sleep(3)
+
+    return page.wait_for_selector(
+        "input[role='combobox']",
+        timeout=timeout,
+        state="visible"
+    )
+
+# ======================
 # SCROLL
 # ======================
 def scroll_results(page, max_rounds=30):
@@ -117,7 +145,7 @@ def get_located_in(page):
     return ""
 
 # ======================
-# OPEN STATUS (ONLY)
+# OPEN STATUS
 # ======================
 def get_open_status(page):
     try:
@@ -141,7 +169,7 @@ def get_open_status(page):
         return ""
 
 # ======================
-# FILTER LIGHT
+# FILTER BASIC
 # ======================
 def get_basic_poi_for_filter(page):
     try:
@@ -152,7 +180,7 @@ def get_basic_poi_for_filter(page):
         return None, "", ""
 
 # ======================
-# PARSE POI FULL
+# PARSE FULL POI
 # ======================
 def parse_current_poi(page, keyword):
     try:
@@ -169,7 +197,6 @@ def parse_current_poi(page, keyword):
     phone = normalize_phone_vn(get_phone(page))
     website = get_website(page)
     open_status = get_open_status(page)
-
     lat, lng = extract_latlng_from_url(page.url)
 
     return {
@@ -184,8 +211,9 @@ def parse_current_poi(page, keyword):
         "lng": lng,
         "url": page.url,
     }
+
 # ======================
-# LOAD KEYWORD DA CHAY
+# LOAD DONE KEYWORDS
 # ======================
 def load_done_keywords(autosave_path):
     done = set()
@@ -226,12 +254,7 @@ def get_place_links_from_list(page):
 def focus_location_with_radius(page, loc_text, radius_km=1.0):
     try:
         lat, lng = [x.strip() for x in loc_text.split(",")]
-        if radius_km <= 1:
-            zoom = 16
-        elif radius_km <= 2:
-            zoom = 15
-        else:
-            zoom = 14
+        zoom = 16 if radius_km <= 1 else 15 if radius_km <= 2 else 14
         page.goto(f"https://www.google.com/maps/@{lat},{lng},{zoom}z", timeout=60000)
         time.sleep(2)
         return float(lat), float(lng)
@@ -242,16 +265,9 @@ def focus_location_with_radius(page, loc_text, radius_km=1.0):
 # XLSX
 # ======================
 FIELDS = [
-    "keyword",
-    "name",
-    "address",
-    "located_in",
-    "phone",
-    "website",
-    "open_status",
-    "lat",
-    "lng",
-    "url",
+    "keyword", "name", "address", "located_in",
+    "phone", "website", "open_status",
+    "lat", "lng", "url"
 ]
 
 def save_xlsx(path, data):
@@ -268,7 +284,7 @@ def save_xlsx(path, data):
 def crawl_google_maps_keyword(page, keyword, center_lat=None, center_lng=None, radius_km=1.0):
     results = []
 
-    sb = page.wait_for_selector("input[role='combobox']", timeout=15000)
+    sb = ensure_search_box(page)
     sb.click()
     sb.fill(keyword)
     sb.press("Enter")
@@ -319,8 +335,6 @@ if __name__ == "__main__":
         print("❌ Chưa chọn file")
         exit()
 
-    print("📄 File Excel:", path)
-
     wb = load_workbook(path)
     ws = wb.active
     headers = [c.value for c in ws[1]]
@@ -340,8 +354,7 @@ if __name__ == "__main__":
     radius = 1.0
     autosave_path = os.path.join(script_dir, "autosave_temp.xlsx")
     done_keywords = load_done_keywords(autosave_path)
-    if done_keywords:
-        print(f"♻️ Resume mode: đã có {len(done_keywords)} keyword đã crawl → sẽ SKIP")
+
     all_results = []
 
     with sync_playwright() as p:
@@ -354,32 +367,29 @@ if __name__ == "__main__":
         )
         page = context.new_page()
         page.goto("https://www.google.com/maps?hl=vi", timeout=60000)
-        time.sleep(2)
+        time.sleep(3)
 
         for i, (k, loc) in enumerate(rows_data, 1):
             k_norm = k.strip().lower()
-
             if k_norm in done_keywords:
-                print(f"⏭️ SKIP (đã crawl): {k}")
+                print(f"⏭️ SKIP: {k}")
                 continue
 
             print(f"\n▶️ {i}/{len(rows_data)}: {k}")
-            center_lat = center_lng = None
 
+            page.goto("https://www.google.com/maps?hl=vi", timeout=60000)
+            time.sleep(2)
+
+            center_lat = center_lng = None
             if loc:
-                print("   📍 Dùng location:", loc)
                 center_lat, center_lng = focus_location_with_radius(page, loc, radius)
-            else:
-                print("   🎯 Không dùng location")
 
             results = crawl_google_maps_keyword(page, k, center_lat, center_lng, radius)
             all_results.extend(results)
 
             if all_results:
                 save_xlsx(autosave_path, all_results)
-                print("💾 Autosave:", autosave_path)
-
-            time.sleep(1)
+                print("💾 Autosave")
 
         context.close()
 
@@ -388,5 +398,4 @@ if __name__ == "__main__":
         f"googlemaps_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
     )
     save_xlsx(out, all_results)
-    print("✅ File cuối:", out)
-    print("🧾 File autosave:", autosave_path)
+    print("✅ DONE:", out)

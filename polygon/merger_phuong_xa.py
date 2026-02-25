@@ -6,7 +6,7 @@ st.set_page_config(page_title="GeoJSON Merger", layout="wide")
 st.title("🗺️ Merge Multiple GeoJSON Polygon ALL ")
 st.write("Upload multiple .geojson files to merge them into one FeatureCollection.")
 
-uploaded_files = st.file_uploader(  
+uploaded_files = st.file_uploader(
     "📂 Upload GeoJSON files",
     type=["geojson"],
     accept_multiple_files=True

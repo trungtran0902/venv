@@ -174,14 +174,13 @@ if uploaded_file:
             result_df = st.session_state.result_df
 
             # ======================================================
-            # LỌC KẾT QUẢ - THÊM ĐIỀU KIỆN LỌC
+            # LỌC KẾT QUẢ - LỌC CỘT (Đã có từ trước)
             # ======================================================
             if 'filter_conditions' not in st.session_state:
                 st.session_state.filter_conditions = []
 
             # Thêm điều kiện lọc mới khi nhấn nút
             if st.button("➕ Thêm điều kiện lọc"):
-                # Mỗi điều kiện sẽ là một tuple gồm (column_name, selected_values)
                 st.session_state.filter_conditions.append({"column": None, "values": []})
 
             # Hiển thị các bộ lọc hiện tại
@@ -198,21 +197,25 @@ if uploaded_file:
                     key=f"filter_values_{idx}"
                 )
 
-                # Lưu lại giá trị đã chọn
                 st.session_state.filter_conditions[idx]["column"] = col_name
                 st.session_state.filter_conditions[idx]["values"] = selected_values
 
             # Lọc dữ liệu theo các điều kiện đã chọn (Áp dụng theo kiểu "và" - AND)
             filtered_df = result_df.copy()
-
-            # Duyệt qua tất cả các điều kiện lọc và áp dụng "và" (AND)
             for condition in st.session_state.filter_conditions:
                 if condition["column"] and condition["values"]:
-                    # Áp dụng lọc với "và" (AND) - chỉ chọn những bản ghi thỏa mãn tất cả các điều kiện
                     filtered_df = filtered_df[filtered_df[condition["column"]].isin(condition["values"])]
 
+            # Lọc theo tên trùng khớp
+            st.subheader("🔎 Lọc theo tên")
+            name_filter = st.radio("Chọn lọc theo tên", ["Tất cả", "Tên chính xác", "Tên gần đúng"])
+            if name_filter == "Tên chính xác":
+                filtered_df = filtered_df[filtered_df["Kết luận"] == "Trùng quán (tên chính xác)"]
+            elif name_filter == "Tên gần đúng":
+                filtered_df = filtered_df[filtered_df["Kết luận"] == "Trùng quán (tên gần đúng)"]
+
             # Hiển thị bảng dữ liệu đã lọc
-            st.subheader("🔎 Lọc kết quả")
+            st.subheader("🔎 Kết quả đã lọc")
             st.dataframe(filtered_df.style.applymap(color_result, subset=["Kết luận"]), use_container_width=True)
 
     # ==================================================
@@ -247,6 +250,3 @@ if uploaded_file:
 
 else:
     st.info("👆 Vui lòng chọn file Excel để bắt đầu.")
-
-
-#=== dùng lệnh "streamlit run sosanh_loc_xem_file.py" chạy trong ternimal==
