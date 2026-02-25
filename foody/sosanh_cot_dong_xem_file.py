@@ -39,14 +39,6 @@ def safe_float(x):
     except:
         return None
 
-def calc_distance(lat1, lng1, lat2, lng2):
-    if any(v is None for v in [lat1, lng1, lat2, lng2]):
-        return None
-    try:
-        return round(geodesic((lat1, lng1), (lat2, lng2)).meters, 2)
-    except:
-        return None
-
 # ======================================================
 # B1 – UPLOAD FILE
 # ======================================================
@@ -179,8 +171,6 @@ if uploaded_file:
 
             # Tạo một cột để lưu kết quả so sánh
             def compare(row, df):
-                name_score = fuzz.token_set_ratio(row["name_norm"], row["name_norm"])
-                # So sánh mỗi dòng với tất cả các dòng khác
                 similar_rows = []
                 for idx, compare_row in df.iterrows():
                     if fuzz.token_set_ratio(row["name_norm"], compare_row["name_norm"]) >= name_thr and row.name != compare_row.name:
