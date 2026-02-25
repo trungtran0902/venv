@@ -25,48 +25,50 @@ if uploaded_files:
         options=file_names
     )
 
-    if selected_files:
+    # Nhập tên file đầu ra
+    output_filename = st.text_input(
+        "📁 Nhập tên file đầu ra (ví dụ: merged_region.geojson)",
+        "merged_region.geojson"
+    )
 
-        gdfs = []
+    # Button "Thực Thi" để merge
+    if st.button("Thực Thi"):
 
-        with st.spinner("Processing geometries..."):
+        if selected_files:
 
-            for file in uploaded_files:
-                if file.name in selected_files:
+            gdfs = []
 
-                    # Lưu file tạm
-                    with tempfile.NamedTemporaryFile(delete=False, suffix=".geojson") as tmp:
-                        tmp.write(file.getvalue())
-                        tmp_path = tmp.name
+            with st.spinner("Processing geometries..."):
 
-                    # Đọc bằng geopandas
-                    gdf = gpd.read_file(tmp_path)
-                    gdfs.append(gdf)
+                for file in uploaded_files:
+                    if file.name in selected_files:
 
-                    os.remove(tmp_path)
+                        # Lưu file tạm
+                        with tempfile.NamedTemporaryFile(delete=False, suffix=".geojson") as tmp:
+                            tmp.write(file.getvalue())
+                            tmp_path = tmp.name
 
-        if gdfs:
+                        # Đọc bằng geopandas
+                        gdf = gpd.read_file(tmp_path)
+                        gdfs.append(gdf)
 
-            # Gộp tất cả lại
-            combined_gdf = gpd.GeoDataFrame(
-                pd.concat(gdfs, ignore_index=True),
-                crs=gdfs[0].crs
-            )
+                        os.remove(tmp_path)
 
-            # Sửa geometry lỗi nếu có
-            combined_gdf["geometry"] = combined_gdf["geometry"].buffer(0)
+            if gdfs:
 
-            # Union toàn bộ geometry
-            merged_geometry = unary_union(combined_gdf.geometry)
+                # Gộp tất cả lại
+                combined_gdf = gpd.GeoDataFrame(
+                    pd.concat(gdfs, ignore_index=True),
+                    crs=gdfs[0].crs
+                )
 
-            # Nhập tên file đầu ra
-            output_filename = st.text_input(
-                "📁 Nhập tên file đầu ra (ví dụ: merged_region.geojson)",
-                "merged_region.geojson"
-            )
+                # Sửa geometry lỗi nếu có
+                combined_gdf["geometry"] = combined_gdf["geometry"].buffer(0)
 
-            # Thêm trường "name" vào properties
-            if output_filename:
+                # Union toàn bộ geometry
+                merged_geometry = unary_union(combined_gdf.geometry)
+
+                # Thêm trường "name" vào properties
                 merged_properties = {"name": output_filename}
 
                 # Tạo GeoDataFrame mới với geometry và properties
@@ -89,22 +91,17 @@ if uploaded_files:
                     st.json(merged_geojson)
 
                 # Thêm button "Thực thu"
-                if st.button("Thực thu"):
+                st.download_button(
+                    label="⬇ Download merged region",
+                    data=json.dumps(merged_geojson, indent=2),
+                    file_name=output_filename,
+                    mime="application/json"
+                )
 
-                    # Nếu đã nhập tên, tiến hành tải file
-                    if output_filename:
-                        st.download_button(
-                            label="⬇ Download merged region",
-                            data=json.dumps(merged_geojson, indent=2),
-                            file_name=output_filename,
-                            mime="application/json"
-                        )
-                    else:
-                        st.warning("❌ Vui lòng nhập tên file đầu ra.")
+            else:
+                st.error("❌ Không có dữ liệu để gộp.")
         else:
-            st.error("❌ Không có dữ liệu để gộp.")
-    else:
-        st.info("Chọn ít nhất 1 file để merge.")
+            st.warning("❌ Vui lòng chọn ít nhất 1 file để merge.")
 
 else:
     st.info("Upload ít nhất 1 file GeoJSON.")
