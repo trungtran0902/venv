@@ -31,6 +31,9 @@ if uploaded_files:
         "merged_region.geojson"
     )
 
+    # Loại bỏ phần mở rộng ".geojson"
+    base_filename = os.path.splitext(output_filename)[0]  # Lấy phần tên file mà không có ".geojson"
+
     # Button "Thực Thi" để merge
     if st.button("Thực Thi"):
 
@@ -52,7 +55,7 @@ if uploaded_files:
                         gdf = gpd.read_file(tmp_path)
 
                         # Thêm trường "name" vào properties của từng feature
-                        gdf["properties"] = gdf.apply(lambda row: {"name": output_filename}, axis=1)
+                        gdf["properties"] = gdf.apply(lambda row: {"name": base_filename}, axis=1)
 
                         gdfs.append(gdf)
 
@@ -79,7 +82,7 @@ if uploaded_files:
                 )
 
                 # Tạo properties cho merged geometry
-                merged_gdf["properties"] = [{"name": output_filename}]
+                merged_gdf["properties"] = [{"name": base_filename}]
 
                 # Chuyển GeoDataFrame thành GeoJSON
                 merged_geojson = json.loads(merged_gdf.to_json())
@@ -95,7 +98,7 @@ if uploaded_files:
                 st.download_button(
                     label="⬇ Download merged region",
                     data=json.dumps(merged_geojson, indent=2),
-                    file_name=output_filename,
+                    file_name=base_filename + ".geojson",  # Tên file đầu ra
                     mime="application/json"
                 )
 
