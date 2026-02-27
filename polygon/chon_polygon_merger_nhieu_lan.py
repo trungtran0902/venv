@@ -53,9 +53,16 @@ if uploaded_files:
         if not st.session_state.merging_sessions:
             st.warning("❌ Vui lòng thêm ít nhất 1 nhóm merge.")
         else:
-            for session in st.session_state.merging_sessions:
+            # Khởi tạo một danh sách để lưu các file đã được tạo
+            all_merged_geojson = []
+
+            for session_id, session in enumerate(st.session_state.merging_sessions):
                 selected_files = session["files"]
                 output_filename = session["output_filename"]
+
+                # Đảm bảo tên file có đuôi .geojson
+                if not output_filename.endswith(".geojson"):
+                    output_filename += ".geojson"
 
                 gdfs = []
 
@@ -111,12 +118,19 @@ if uploaded_files:
                     with st.expander(f"🔍 Preview {output_filename}"):
                         st.json(merged_geojson)
 
-                    # Thêm button "Thực thu"
-                    st.download_button(
-                        label="⬇ Download merged region",
-                        data=json.dumps(merged_geojson, indent=2),
-                        file_name=output_filename,  # Tên file đầu ra
-                        mime="application/json"
-                    )
+                    # Lưu geojson vào danh sách các file đã tạo
+                    all_merged_geojson.append({
+                        "data": json.dumps(merged_geojson, indent=2),
+                        "file_name": output_filename
+                    })
                 else:
                     st.error("❌ Không có dữ liệu để gộp.")
+
+            # Bước 5: Nút download cho tất cả các file
+            if all_merged_geojson:
+                st.download_button(
+                    label="⬇ Download all merged regions",
+                    data=json.dumps(all_merged_geojson),
+                    file_name="all_merged_regions.zip",
+                    mime="application/zip"
+                )
