@@ -21,36 +21,32 @@ uploaded_files = st.file_uploader(
 if uploaded_files:
     file_names = [file.name for file in uploaded_files]
 
-    # Bước 2: Chọn các file cần merge
-    selected_files = st.multiselect(
-        "📌 Select files to merge",
-        options=file_names
-    )
-
-    # Bước 3: Cho phép người dùng nhập tên file đầu ra
-    output_filename = st.text_input(
-        "📁 Nhập tên file đầu ra cho nhóm đầu tiên (ví dụ: merged_region.geojson)",
-        "merged_region.geojson"
-    )
-
-    # Lưu các tác vụ merge vào session_state
+    # Lưu trữ thông tin các nhóm merge
     if "merging_sessions" not in st.session_state:
         st.session_state.merging_sessions = []
 
-    # Bước 2.1: Cho phép thêm tác vụ merge mới (chọn thêm file và nhập tên file đầu ra mới)
+    # Bước 2: Hiển thị các nhóm merge đã thêm
+    for i, session in enumerate(st.session_state.merging_sessions):
+        with st.expander(f"Nhóm merge {i+1}"):
+            selected_files = st.multiselect(
+                f"📌 Chọn các file cần merge (Nhóm {i+1})",
+                options=file_names,
+                default=session["files"]
+            )
+            output_filename = st.text_input(
+                f"📁 Nhập tên file đầu ra cho nhóm {i+1}",
+                value=session["output_filename"]
+            )
+            session["files"] = selected_files
+            session["output_filename"] = output_filename
+
+    # Bước 3: Nút Thêm nhóm merge mới
     if st.button("Thêm nhóm merge"):
-        if selected_files:
-            # Lưu thông tin nhóm merge vào session_state
-            st.session_state.merging_sessions.append({
-                "files": selected_files,
-                "output_filename": output_filename
-            })
-
-            # Cập nhật lại thông tin để người dùng có thể tiếp tục thao tác
-            selected_files = []
-            output_filename = ""
-
-            st.success(f"✅ Đã thêm nhóm merge mới! Bạn có thể tiếp tục thêm nhóm khác hoặc bấm 'Thực Thi'.")
+        st.session_state.merging_sessions.append({
+            "files": [],
+            "output_filename": ""
+        })
+        st.experimental_rerun()  # Để giao diện được làm mới và hiển thị nhóm merge mới
 
     # Bước 4: Thực thi các tác vụ merge
     if st.button("Thực Thi"):
