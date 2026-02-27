@@ -42,11 +42,11 @@ if uploaded_files:
 
     # Bước 3: Nút Thêm nhóm merge mới
     if st.button("Thêm nhóm merge"):
+        # Thêm nhóm merge vào session_state mà không cần gọi lại giao diện
         st.session_state.merging_sessions.append({
             "files": [],
             "output_filename": ""
         })
-        st.experimental_rerun()  # Để giao diện được làm mới và hiển thị nhóm merge mới
 
     # Bước 4: Thực thi các tác vụ merge
     if st.button("Thực Thi"):
