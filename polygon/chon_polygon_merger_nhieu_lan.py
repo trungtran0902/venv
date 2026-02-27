@@ -29,14 +29,14 @@ if uploaded_files:
 
     # Bước 2: Hiển thị các nhóm merge đã thêm
     for i, session in enumerate(st.session_state.merging_sessions):
-        with st.expander(f"Nhóm merge {i + 1}"):
+        with st.expander(f"Nhóm merge {i+1}"):
             selected_files = st.multiselect(
-                f"📌 Chọn các file cần merge (Nhóm {i + 1})",
+                f"📌 Chọn các file cần merge (Nhóm {i+1})",
                 options=file_names,
                 default=session["files"]
             )
             output_filename = st.text_input(
-                f"📁 Nhập tên file đầu ra cho nhóm {i + 1}",
+                f"📁 Nhập tên file đầu ra cho nhóm {i+1}",
                 value=session["output_filename"]
             )
             session["files"] = selected_files
@@ -63,13 +63,9 @@ if uploaded_files:
                 selected_files = session["files"]
                 output_filename = session["output_filename"]
 
-                # Đảm bảo tên file có đuôi .geojson và tự động tăng ID
+                # Đảm bảo tên file có đuôi .geojson
                 if not output_filename.endswith(".geojson"):
                     output_filename += ".geojson"
-
-                # Tăng ID tự động cho tên file nếu chưa có
-                file_id = session_id + 1  # Dùng session_id làm ID tăng dần
-                output_filename = f"merged_region_{file_id}.geojson"
 
                 gdfs = []
 
