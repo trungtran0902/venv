@@ -55,7 +55,7 @@ if uploaded_files:
                         gdf = gpd.read_file(tmp_path)
 
                         # Thêm trường "name" vào properties của từng feature
-                        gdf["name"] = gdf.apply(lambda row: {base_filename}, axis=1)
+                        gdf["name"] = base_filename
 
                         gdfs.append(gdf)
 
@@ -82,7 +82,7 @@ if uploaded_files:
                 )
 
                 # Tạo properties cho merged geometry
-                merged_gdf["properties"] = [{"name": base_filename}]
+                merged_gdf["name"] = base_filename
 
                 # Chuyển GeoDataFrame thành GeoJSON
                 merged_geojson = json.loads(merged_gdf.to_json())
