@@ -83,7 +83,7 @@ if uploaded_files:
 
                             # Thêm trường "name" vào properties của từng feature
                             base_filename = os.path.splitext(output_filename)[0]  # Loại bỏ phần mở rộng
-                            gdf["name"] = base_filename
+                            gdf["name"] = base_filename  # Gán tên vào trường "name"
 
                             gdfs.append(gdf)
 
@@ -109,7 +109,7 @@ if uploaded_files:
                     )
 
                     # Tạo properties cho merged geometry, tăng ID tự động cho mỗi feature
-                    merged_gdf["name"] = base_filename
+                    merged_gdf["properties"] = [{"id": i, "name": base_filename} for i in range(len(merged_gdf))]
 
                     # Chuyển GeoDataFrame thành GeoJSON
                     merged_geojson = json.loads(merged_gdf.to_json())
