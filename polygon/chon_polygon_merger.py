@@ -55,7 +55,7 @@ if uploaded_files:
                         gdf = gpd.read_file(tmp_path)
 
                         # Thêm trường "name" vào properties của từng feature
-                        gdf["properties"] = gdf.apply(lambda row: {"name": base_filename}, axis=1)
+                        gdf["name"] = gdf.apply(lambda row: {base_filename}, axis=1)
 
                         gdfs.append(gdf)
 
