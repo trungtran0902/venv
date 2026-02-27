@@ -4,7 +4,7 @@ import time
 import os
 
 STATE_FILE = os.path.join(os.path.dirname(__file__), "foody_state_hcm.json")
-OUTPUT_FILE = os.path.join(os.path.dirname(__file__), "captured_urls_HCM.txt")
+OUTPUT_FILE = os.path.join(os.path.dirname(__file__), "captured_urls_HN_2.txt")
 
 def load_cookies(file_path):
     try:
