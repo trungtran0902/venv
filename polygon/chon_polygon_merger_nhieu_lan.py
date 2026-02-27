@@ -5,6 +5,8 @@ import pandas as pd
 from shapely.ops import unary_union
 import tempfile
 import os
+import zipfile
+from io import BytesIO
 
 st.set_page_config(page_title="GeoJSON Region Union", layout="wide")
 
@@ -27,14 +29,14 @@ if uploaded_files:
 
     # Bước 2: Hiển thị các nhóm merge đã thêm
     for i, session in enumerate(st.session_state.merging_sessions):
-        with st.expander(f"Nhóm merge {i+1}"):
+        with st.expander(f"Nhóm merge {i + 1}"):
             selected_files = st.multiselect(
-                f"📌 Chọn các file cần merge (Nhóm {i+1})",
+                f"📌 Chọn các file cần merge (Nhóm {i + 1})",
                 options=file_names,
                 default=session["files"]
             )
             output_filename = st.text_input(
-                f"📁 Nhập tên file đầu ra cho nhóm {i+1}",
+                f"📁 Nhập tên file đầu ra cho nhóm {i + 1}",
                 value=session["output_filename"]
             )
             session["files"] = selected_files
@@ -56,13 +58,18 @@ if uploaded_files:
             # Khởi tạo một danh sách để lưu các file đã được tạo
             all_merged_geojson = []
 
+            # Duyệt qua tất cả các nhóm merge đã thêm
             for session_id, session in enumerate(st.session_state.merging_sessions):
                 selected_files = session["files"]
                 output_filename = session["output_filename"]
 
-                # Đảm bảo tên file có đuôi .geojson
+                # Đảm bảo tên file có đuôi .geojson và tự động tăng ID
                 if not output_filename.endswith(".geojson"):
                     output_filename += ".geojson"
+
+                # Tăng ID tự động cho tên file nếu chưa có
+                file_id = session_id + 1  # Dùng session_id làm ID tăng dần
+                output_filename = f"merged_region_{file_id}.geojson"
 
                 gdfs = []
 
@@ -105,8 +112,8 @@ if uploaded_files:
                         crs=combined_gdf.crs
                     )
 
-                    # Tạo properties cho merged geometry
-                    merged_gdf["properties"] = [{"name": base_filename}]
+                    # Tạo properties cho merged geometry, tăng ID tự động cho mỗi feature
+                    merged_gdf["properties"] = [{"name": base_filename, "id": i} for i in range(len(merged_gdf))]
 
                     # Chuyển GeoDataFrame thành GeoJSON
                     merged_geojson = json.loads(merged_gdf.to_json())
@@ -126,11 +133,18 @@ if uploaded_files:
                 else:
                     st.error("❌ Không có dữ liệu để gộp.")
 
-            # Bước 5: Nút download cho tất cả các file
+            # Bước 5: Nút download cho tất cả các file (tạo file ZIP hợp lệ)
             if all_merged_geojson:
+                zip_buffer = BytesIO()
+                with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+                    for merged_file in all_merged_geojson:
+                        zip_file.writestr(merged_file["file_name"], merged_file["data"])
+
+                zip_buffer.seek(0)
+
                 st.download_button(
                     label="⬇ Download all merged regions",
-                    data=json.dumps(all_merged_geojson),
+                    data=zip_buffer,
                     file_name="all_merged_regions.zip",
                     mime="application/zip"
                 )
