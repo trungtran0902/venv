@@ -109,7 +109,8 @@ if uploaded_files:
                     )
 
                     # Tạo properties cho merged geometry, tăng ID tự động cho mỗi feature
-                    merged_gdf["properties"] = [{"id": i, "name": base_filename} for i in range(len(merged_gdf))]
+                    merged_gdf["name"] = base_filename
+                    merged_gdf["id"] = [i for i in range(len(merged_gdf))]  # Tăng ID tự động
 
                     # Chuyển GeoDataFrame thành GeoJSON
                     merged_geojson = json.loads(merged_gdf.to_json())
